@@ -5,6 +5,11 @@ permissions:
 
 on:
   workflow_dispatch:
+    inputs:
+      node:
+        description: "ABYSS NODE ID"
+        required: true
+        type: string
 
 jobs:
   build:
@@ -23,47 +28,49 @@ jobs:
         run: npm install puppeteer
 
       - name: Generate record
-        run: |
+      env:
+      NODE_ID: ${{ inputs.node }}
+      run: |
           node <<'EOF'
           const fs = require("fs");
           const puppeteer = require("puppeteer");
-
+      
           const node = process.env.NODE_ID || "test-node";
-
+      
           const recordDir = `record/${node}`;
           fs.mkdirSync(recordDir,{recursive:true});
-
+      
           const template = fs.readFileSync("templates/card.html","utf8");
           const html = template.replace("{{NODE}}",node);
-
+      
           fs.writeFileSync(`${recordDir}/card.html`,html);
-
+      
           (async()=>{
-
+      
           const browser = await puppeteer.launch({
             headless: "new",
             args: ['--no-sandbox','--disable-setuid-sandbox']
           });
-
+      
           const page = await browser.newPage();
-
+      
           await page.goto("file://" + process.cwd() + "/" + recordDir + "/card.html");
-
+      
           await page.setViewport({width:1200,height:630});
-
+      
           await page.screenshot({
             path:`${recordDir}/card.png`
           });
-
+      
           await browser.close();
-
+      
           })();
-
+      
           const pageTemplate = fs.readFileSync("templates/page.html","utf8")
             .replaceAll("{{NODE}}",node);
-
+      
           fs.writeFileSync(`${recordDir}/index.html`,pageTemplate);
-
+      
           EOF
 
       - name: Commit files
